@@ -77,4 +77,4 @@ Visão geral dos diretórios e responsabilidades:
 
 - Todos os agendamentos e sessões de login são simulados via localStorage.
 - Este projeto serve para fins de prototipação e demonstração de habilidades.
-- A reprodução total ou parcial deste código sem autorização expressa é proibida.
+- A reprodução total ou parcial deste código é proibida.
