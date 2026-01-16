@@ -1,43 +1,40 @@
-"""Script to populate initial data for barbershop"""
 import asyncio
 import sys
 import os
 
-# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import get_session, init_db
 from app.models.models import Service, Barber
+from app.auth import get_password_hash
 from sqlmodel import select
 
 async def seed_data():
-    """Seed initial data"""
     await init_db()
 
     async for session in get_session():
-        # Check if data already exists
         result = await session.exec(select(Service))
         existing_services = result.all()
 
         if not existing_services:
-            print("Creating services...")
+            print("Criando servicos...")
             services = [
                 Service(
-                    name="Serviço 1",
+                    name="Corte Simples",
                     duration="30min",
                     price="R$ 25",
-                    description="Corte básico",
+                    description="Corte basico",
                     active=True
                 ),
                 Service(
-                    name="Serviço 2",
+                    name="Corte + Barba",
                     duration="1h",
                     price="R$ 50",
                     description="Corte completo com barba",
                     active=True
                 ),
                 Service(
-                    name="Serviço 3",
+                    name="Tratamento Premium",
                     duration="1h30min",
                     price="R$ 75",
                     description="Tratamento premium completo",
@@ -49,31 +46,33 @@ async def seed_data():
                 session.add(service)
 
             await session.commit()
-            print(f"Created {len(services)} services")
+            print(f"Criados {len(services)} servicos")
 
-        # Check if barbers exist
         result_barbers = await session.exec(select(Barber))
         existing_barbers = result_barbers.all()
 
         if not existing_barbers:
-            print("Creating barbers...")
+            print("Criando barbeiros...")
             barbers = [
                 Barber(
                     name="Barbeiro 1",
                     email="barbeiro1@barbearia.com.br",
-                    specialty="Barbas, Cortes Clássicos",
+                    password_hash=get_password_hash("871374"),
+                    specialty="Barbas, Cortes Classicos",
                     active=True
                 ),
                 Barber(
                     name="Barbeiro 2",
                     email="barbeiro2@barbearia.com.br",
+                    password_hash=get_password_hash("871374"),
                     specialty="Cortes Modernos",
                     active=True
                 ),
                 Barber(
                     name="Barbeiro 3",
                     email="barbeiro3@barbearia.com.br",
-                    specialty="Barbas, Cortes Clássicos, Cortes Modernos",
+                    password_hash=get_password_hash("871374"),
+                    specialty="Barbas, Cortes Classicos, Cortes Modernos",
                     active=True
                 )
             ]
@@ -82,20 +81,24 @@ async def seed_data():
                 session.add(barber)
 
             await session.commit()
-            print(f"Created {len(barbers)} barbers")
+            print(f"Criados {len(barbers)} barbeiros")
 
-        print("\nData seeding completed!")
-        print("\nServices:")
+        print("\nDados criados!")
+        print("\nServicos:")
         result_services = await session.exec(select(Service))
         for s in result_services.all():
             print(f"  - {s.name} ({s.duration}) - {s.price}")
 
-        print("\nBarbers:")
+        print("\nBarbeiros:")
         result_barbers = await session.exec(select(Barber))
         for b in result_barbers.all():
-            print(f"  - {b.name} - {b.specialty}")
+            print(f"  - {b.name} ({b.email})")
 
-        break  # Only need one session
+        print("\nCredenciais de acesso:")
+        print("  Email: barbeiro1@barbearia.com.br")
+        print("  Senha: 871374")
+
+        break
 
 if __name__ == "__main__":
     asyncio.run(seed_data())

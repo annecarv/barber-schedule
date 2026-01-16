@@ -1,84 +1,62 @@
 import os
-import time
-from typing import List, Optional
-from fastapi import Header, HTTPException, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import jwt
-import requests
+from datetime import datetime, timedelta
+from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel
 
-AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
-API_AUDIENCE = os.getenv("API_AUDIENCE")
-ALGORITHMS = os.getenv("ALGORITHMS", "RS256").split(",")
+SECRET_KEY = os.getenv("SECRET_KEY", "chave-secreta-desenvolvimento-mudar-em-producao")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-http_bearer = HTTPBearer()
-
-class TokenData:
-    def __init__(self, sub: str, roles: List[str]):
-        self.sub = sub
-        self.roles = roles
-
-_jwks = None
-_jwks_uri = None
-
-def _get_jwks():
-    global _jwks, _jwks_uri
-    if _jwks is None:
-        if not AUTH0_DOMAIN:
-            raise RuntimeError("AUTH0_DOMAIN not configured")
-        _jwks_uri = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
-        r = requests.get(_jwks_uri)
-        r.raise_for_status()
-        _jwks = r.json()
-    return _jwks
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-def verify_jwt(token: str) -> dict:
-    jwks = _get_jwks()
-    unverified_header = jwt.get_unverified_header(token)
-    rsa_key = {}
-    for key in jwks.get("keys", []):
-        if key["kid"] == unverified_header.get("kid"):
-            rsa_key = {
-                "kty": key["kty"],
-                "kid": key["kid"],
-                "use": key.get("use"),
-                "n": key.get("n"),
-                "e": key.get("e"),
-            }
-    if rsa_key:
-        try:
-            payload = jwt.decode(
-                token,
-                rsa_key,
-                algorithms=ALGORITHMS,
-                audience=API_AUDIENCE,
-                issuer=f"https://{AUTH0_DOMAIN}/",
-            )
-            return payload
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="token_expired")
-        except jwt.JWTClaimsError:
-            raise HTTPException(status_code=401, detail="invalid_claims")
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
-    raise HTTPException(status_code=401, detail="Unable to find appropriate key")
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(http_bearer)) -> TokenData:
-    token = credentials.credentials
-    payload = verify_jwt(token)
-    sub = payload.get("sub")
-    # roles may be in 'roles' claim or under a custom namespace; adapt as needed
-    roles = payload.get("roles") or payload.get("https://example.com/roles") or []
-    if isinstance(roles, str):
-        roles = [roles]
-    return TokenData(sub=sub, roles=roles)
+class TokenData(BaseModel):
+    email: Optional[str] = None
+    barber_id: Optional[int] = None
 
 
-def has_role(token: TokenData, allowed_roles: List[str]) -> bool:
-    if not token:
-        return False
-    for r in token.roles:
-        if r.upper() in [ar.upper() for ar in allowed_roles]:
-            return True
-    return False
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciais invalidas",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        barber_id: int = payload.get("barber_id")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email, barber_id=barber_id)
+    except JWTError:
+        raise credentials_exception
+    return token_data
