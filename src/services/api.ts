@@ -1,4 +1,3 @@
-// API service for barbershop backend
 const API_BASE_URL = 'http://localhost:8000/api';
 
 export interface Service {
@@ -44,11 +43,10 @@ export interface BookingCreate {
   customer_phone?: string;
   service_id: number;
   barber_id: number;
-  booking_date: string; // YYYY-MM-DD
-  booking_time: string; // HH:MM
+  booking_date: string;
+  booking_time: string;
 }
 
-// Services
 export const getServices = async (): Promise<Service[]> => {
   const response = await fetch(`${API_BASE_URL}/services`);
   if (!response.ok) throw new Error('Failed to fetch services');
@@ -61,7 +59,6 @@ export const getService = async (id: number): Promise<Service> => {
   return response.json();
 };
 
-// Barbers
 export const getBarbers = async (): Promise<Barber[]> => {
   const response = await fetch(`${API_BASE_URL}/barbers`);
   if (!response.ok) throw new Error('Failed to fetch barbers');
@@ -74,7 +71,6 @@ export const getBarber = async (id: number): Promise<Barber> => {
   return response.json();
 };
 
-// Bookings
 export const createBooking = async (booking: BookingCreate): Promise<Booking> => {
   const response = await fetch(`${API_BASE_URL}/bookings`, {
     method: 'POST',

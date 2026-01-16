@@ -39,7 +39,6 @@ export function BookingPage() {
     celular: ""
   });
 
-  // Load services and barbers on mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -57,7 +56,6 @@ export function BookingPage() {
     loadData();
   }, []);
 
-  // Load available times when service, barber and date are selected
   useEffect(() => {
     const loadAvailableTimes = async () => {
       if (bookingData.service && bookingData.barber && bookingData.date) {

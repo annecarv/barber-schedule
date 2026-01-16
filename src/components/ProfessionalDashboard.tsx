@@ -95,7 +95,6 @@ export function ProfessionalDashboard() {
     const loadAppointments = async () => {
       try {
         setLoading(true);
-        // Load all appointments for barber 1 (the logged in barber)
         const data = await getBookings(1);
         const sorted = data.sort((a, b) =>
           (a.booking_date + a.booking_time).localeCompare(b.booking_date + b.booking_time)
