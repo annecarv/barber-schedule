@@ -6,28 +6,14 @@ import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router";
-
-interface Appointment {
-  id: string;
-  date: string;
-  time: string;
-  serviceId: string;
-  serviceName: string;
-  duration: number;
-  price: string;
-  barberId: string;
-  barberName: string;
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-}
+import { getBookings, Booking } from "../services/api";
 
 function AppointmentCard({
   apt,
   mode,
   formatDateFancy,
 }: {
-  apt: Appointment;
+  apt: Booking;
   mode: "today" | "upcoming";
   formatDateFancy: (date: string, time: string) => string;
 }) {
@@ -39,7 +25,7 @@ function AppointmentCard({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-neutral-900">{apt.clientName}</h3>
+            <h3 className="text-neutral-900">{apt.customer_name}</h3>
             <Badge
               variant="outline"
               className={
@@ -48,29 +34,33 @@ function AppointmentCard({
                   : "bg-blue-50 text-blue-700 border-blue-200"
               }
             >
-              {mode === "today" ? apt.time : formatDateFancy(apt.date, apt.time)}
+              {mode === "today" ? apt.booking_time : formatDateFancy(apt.booking_date, apt.booking_time)}
             </Badge>
           </div>
 
           <div className="space-y-1 text-neutral-600">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 shrink-0" />
-              <span>{apt.clientEmail}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 shrink-0" />
-              <span>{apt.clientPhone}</span>
-            </div>
+            {apt.customer_email && (
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 shrink-0" />
+                <span>{apt.customer_email}</span>
+              </div>
+            )}
+            {apt.customer_phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 shrink-0" />
+                <span>{apt.customer_phone}</span>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-6 lg:gap-8">
           <div className="text-right">
-            <p className="text-neutral-900 mb-1">{apt.serviceName}</p>
-            <p className="text-neutral-600">{apt.duration} min</p>
+            <p className="text-neutral-900 mb-1">{apt.service_name}</p>
+            <p className="text-neutral-600">{apt.service_duration}</p>
           </div>
           <div className="text-right">
-            <p className="text-amber-600">{apt.price}</p>
+            <p className="text-amber-600">{apt.service_price}</p>
           </div>
         </div>
       </div>
@@ -88,8 +78,9 @@ function getToday() {
 }
 
 export function ProfessionalDashboard() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Booking[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const today = getToday();
@@ -101,17 +92,23 @@ export function ProfessionalDashboard() {
       return;
     }
 
-    const stored = localStorage.getItem("appointments");
-    if (stored) {
-      const parsed: Appointment[] = JSON.parse(stored);
-      const filtered = parsed.filter((apt) => apt.barberId === "barber1");
+    const loadAppointments = async () => {
+      try {
+        setLoading(true);
+        // Load all appointments for barber 1 (the logged in barber)
+        const data = await getBookings(1);
+        const sorted = data.sort((a, b) =>
+          (a.booking_date + a.booking_time).localeCompare(b.booking_date + b.booking_time)
+        );
+        setAppointments(sorted);
+      } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const sorted = filtered.sort((a, b) =>
-        (a.date + a.time).localeCompare(b.date + b.time)
-      );
-
-      setAppointments(sorted);
-    }
+    loadAppointments();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -119,11 +116,11 @@ export function ProfessionalDashboard() {
     setShowLogoutModal(true);
   };
 
-  const todaysAppointments = appointments.filter((apt) => apt.date === today);
-  const upcomingAppointments = appointments.filter((apt) => apt.date > today);
+  const todaysAppointments = appointments.filter((apt) => apt.booking_date === today);
+  const upcomingAppointments = appointments.filter((apt) => apt.booking_date > today);
 
   const totalEarningsToday = todaysAppointments.reduce((sum, apt) => {
-    const value = Number(apt.price.replace(/\D/g, ""));
+    const value = Number(apt.service_price.replace(/\D/g, ""));
     return sum + value;
   }, 0);
 
@@ -226,7 +223,11 @@ export function ProfessionalDashboard() {
             </TabsList>
 
             <TabsContent value="today">
-              {todaysAppointments.length === 0 ? (
+              {loading ? (
+                <p className="text-center text-neutral-500 py-6">
+                  Carregando agendamentos...
+                </p>
+              ) : todaysAppointments.length === 0 ? (
                 <p className="text-center text-neutral-500 py-6">
                   Nenhum agendamento hoje.
                 </p>
@@ -245,7 +246,11 @@ export function ProfessionalDashboard() {
             </TabsContent>
 
             <TabsContent value="upcoming">
-              {upcomingAppointments.length === 0 ? (
+              {loading ? (
+                <p className="text-center text-neutral-500 py-6">
+                  Carregando agendamentos...
+                </p>
+              ) : upcomingAppointments.length === 0 ? (
                 <p className="text-center text-neutral-500 py-6">
                   Nenhum futuro agendamento.
                 </p>

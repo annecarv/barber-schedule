@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "./Header";
 import { Button } from "./ui/button";
 import { Calendar } from "./ui/calendar";
@@ -6,98 +6,11 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router";
-
-const SERVICES = [
-  { id: "service1", name: "Serviço 1", duration: "30min", price: "R$ 25" },
-  { id: "service2", name: "Serviço 2", duration: "1h", price: "R$ 50" },
-  { id: "service3", name: "Serviço 3", duration: "1h30min", price: "R$ 75" }
-];
-
-const BARBERS = [
-  { id: "barber1", name: "Barbeiro 1", specialty: "Barbas, Cortes Clássicos" },
-  { id: "barber2", name: "Barbeiro 2", specialty: "Cortes Modernos" },
-  { id: "barber3", name: "Barbeiro 3", specialty: "Barbas, Cortes Clássicos, Cortes Modernos" }
-];
-
-const generateTimeSlots = () => {
-  const slots: string[] = [];
-  for (let hour = 9; hour < 19; hour++) {
-    slots.push(`${hour.toString().padStart(2, "0")}:00`);
-    slots.push(`${hour.toString().padStart(2, "0")}:30`);
-  }
-  return slots;
-};
-
-const TIME_SLOTS = generateTimeSlots();
-
-function getDurationBlocks(service: typeof SERVICES[0] | null) {
-  if (!service) return 0;
-  if (service.duration === "30min") return 1;
-  if (service.duration === "1h") return 2;
-  if (service.duration === "1h30min") return 3;
-  return 1;
-}
-
-function getTimeIndex(time: string) {
-  return TIME_SLOTS.indexOf(time);
-}
-
-function getLocalBookings(): Record<string, Record<string, string[]>> {
-  return JSON.parse(localStorage.getItem("bookings") || "{}");
-}
-
-function saveLocalBooking(date: string, barberId: string, times: string[]) {
-  const bookings = getLocalBookings();
-  if (!bookings[date]) bookings[date] = {};
-  if (!bookings[date][barberId]) bookings[date][barberId] = [];
-  bookings[date][barberId] = [...bookings[date][barberId], ...times];
-  localStorage.setItem("bookings", JSON.stringify(bookings));
-}
-
-function isTimeAvailable(
-  date: Date | undefined,
-  time: string,
-  service: typeof SERVICES[0] | null,
-  barber: typeof BARBERS[0] | null
-) {
-  if (!date || !service || !barber) return true;
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const dateKey = `${year}-${month}-${day}`;
-
-  const allBookings = getLocalBookings();
-  const bookedTimes = allBookings[dateKey]?.[barber.id] || [];
-
-  const durationBlocks = getDurationBlocks(service);
-  const startIndex = getTimeIndex(time);
-  if (startIndex === -1) return false;
-  if (startIndex + durationBlocks > TIME_SLOTS.length) return false;
-
-  for (let i = 0; i < durationBlocks; i++) {
-    const slot = TIME_SLOTS[startIndex + i];
-    if (bookedTimes.includes(slot)) return false;
-  }
-
-  return true;
-}
-
-function getReservedBlocks(service: typeof SERVICES[0], time: string) {
-  const blocks = getDurationBlocks(service);
-  const start = getTimeIndex(time);
-  const reserved: string[] = [];
-
-  for (let i = 0; i < blocks; i++) {
-    reserved.push(TIME_SLOTS[start + i]);
-  }
-
-  return reserved;
-}
+import { getServices, getBarbers, getAvailableTimes, createBooking, Service, Barber } from "../services/api";
 
 interface BookingData {
-  service: typeof SERVICES[0] | null;
-  barber: typeof BARBERS[0] | null;
+  service: Service | null;
+  barber: Barber | null;
   date: Date | undefined;
   time: string | null;
   nomeCompleto: string;
@@ -109,6 +22,10 @@ export function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
   const navigate = useNavigate();
 
@@ -122,6 +39,53 @@ export function BookingPage() {
     celular: ""
   });
 
+  // Load services and barbers on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [servicesData, barbersData] = await Promise.all([
+          getServices(),
+          getBarbers()
+        ]);
+        setServices(servicesData);
+        setBarbers(barbersData);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Load available times when service, barber and date are selected
+  useEffect(() => {
+    const loadAvailableTimes = async () => {
+      if (bookingData.service && bookingData.barber && bookingData.date) {
+        try {
+          setLoading(true);
+          const year = bookingData.date.getFullYear();
+          const month = String(bookingData.date.getMonth() + 1).padStart(2, "0");
+          const day = String(bookingData.date.getDate()).padStart(2, "0");
+          const dateStr = `${year}-${month}-${day}`;
+
+          const times = await getAvailableTimes(
+            bookingData.barber.id,
+            dateStr,
+            bookingData.service.id
+          );
+          setAvailableTimes(times);
+        } catch (error) {
+          console.error("Erro ao carregar horários:", error);
+          setAvailableTimes([]);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadAvailableTimes();
+  }, [bookingData.service, bookingData.barber, bookingData.date]);
+
   const isDateDisabled = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -130,10 +94,10 @@ export function BookingPage() {
     return false;
   };
 
-  const handleServiceSelect = (service: typeof SERVICES[0]) =>
+  const handleServiceSelect = (service: Service) =>
     setBookingData({ ...bookingData, service });
 
-  const handleBarberSelect = (barber: typeof BARBERS[0]) =>
+  const handleBarberSelect = (barber: Barber) =>
     setBookingData({ ...bookingData, barber });
 
   const handleDateSelect = (date: Date | undefined) =>
@@ -146,56 +110,39 @@ export function BookingPage() {
 
   const handleBack = () => setCurrentStep(currentStep - 1);
 
-  const handleConfirmBooking = (e: React.FormEvent) => {
+  const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (bookingData.date && bookingData.time && bookingData.service && bookingData.barber) {
+    if (!bookingData.date || !bookingData.time || !bookingData.service || !bookingData.barber) {
+      alert("Por favor, preencha todos os campos");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
       const year = bookingData.date.getFullYear();
       const month = String(bookingData.date.getMonth() + 1).padStart(2, "0");
       const day = String(bookingData.date.getDate()).padStart(2, "0");
-      const dateKey = `${year}-${month}-${day}`;
+      const dateStr = `${year}-${month}-${day}`;
 
-      const stored = localStorage.getItem("appointments");
-      const existing = stored ? (JSON.parse(stored) as any[]) : [];
+      await createBooking({
+        customer_name: bookingData.nomeCompleto,
+        customer_email: bookingData.email,
+        customer_phone: bookingData.celular,
+        service_id: bookingData.service.id,
+        barber_id: bookingData.barber.id,
+        booking_date: dateStr,
+        booking_time: bookingData.time
+      });
 
-      const alreadyBooked = existing.some(
-        (apt) =>
-          apt.date === dateKey &&
-          apt.time === bookingData.time &&
-          apt.clientEmail === bookingData.email &&
-          apt.clientPhone === bookingData.celular
-      );
-
-      if (alreadyBooked) {
-        setShowErrorModal(true);
-        return;
-      }
-
-      const blocks = getReservedBlocks(bookingData.service, bookingData.time);
-      saveLocalBooking(dateKey, bookingData.barber.id, blocks);
-
-      const durationMinutes = getDurationBlocks(bookingData.service) * 30;
-
-      const newAppointment = {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        date: dateKey,
-        time: bookingData.time,
-        serviceId: bookingData.service.id,
-        serviceName: bookingData.service.name,
-        duration: durationMinutes,
-        price: bookingData.service.price,
-        barberId: bookingData.barber.id,
-        barberName: bookingData.barber.name,
-        clientName: bookingData.nomeCompleto,
-        clientEmail: bookingData.email,
-        clientPhone: bookingData.celular
-      };
-
-      existing.push(newAppointment);
-      localStorage.setItem("appointments", JSON.stringify(existing));
+      setShowModal(true);
+    } catch (error: any) {
+      alert(`Erro ao criar agendamento: ${error.message}`);
+      setShowErrorModal(true);
+    } finally {
+      setLoading(false);
     }
-
-    setShowModal(true);
   };
 
   const canProceedStep1 = bookingData.service !== null;
@@ -253,25 +200,29 @@ export function BookingPage() {
               <p className="text-[#1A1A1A] mb-4 text-lg font-normal">E aí, o que vai ser?</p>
 
               <div className="space-y-4">
-                {SERVICES.map((service) => (
-                  <button
-                    key={service.id}
-                    onClick={() => handleServiceSelect(service)}
-                    className={`w-full p-6 rounded-lg border-2 text-left transition-all ${
-                      bookingData.service?.id === service.id
-                        ? "border-[#E67E22] bg-[#E67E22]/5"
-                        : "border-gray-200 hover:border-[#E67E22]/50"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-[#1A1A1A] mb-2">{service.name}</h3>
-                        <p className="text-gray-600">{service.duration}</p>
+                {services.length === 0 ? (
+                  <p className="text-center text-gray-500">Carregando serviços...</p>
+                ) : (
+                  services.map((service) => (
+                    <button
+                      key={service.id}
+                      onClick={() => handleServiceSelect(service)}
+                      className={`w-full p-6 rounded-lg border-2 text-left transition-all ${
+                        bookingData.service?.id === service.id
+                          ? "border-[#E67E22] bg-[#E67E22]/5"
+                          : "border-gray-200 hover:border-[#E67E22]/50"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-[#1A1A1A] mb-2">{service.name}</h3>
+                          <p className="text-gray-600">{service.duration}</p>
+                        </div>
+                        <p className="text-[#E67E22] font-bold">{service.price}</p>
                       </div>
-                      <p className="text-[#E67E22] font-bold">{service.price}</p>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))
+                )}
               </div>
 
               <div className="mt-8 flex justify-end">
@@ -291,20 +242,24 @@ export function BookingPage() {
               <p className="text-[#1A1A1A] mb-4 text-lg font-normal">E quem você escolhe?</p>
 
               <div className="space-y-4">
-                {BARBERS.map((barber) => (
-                  <button
-                    key={barber.id}
-                    onClick={() => handleBarberSelect(barber)}
-                    className={`w-full p-6 rounded-lg border-2 text-left transition-all ${
-                      bookingData.barber?.id === barber.id
-                        ? "border-[#E67E22] bg-[#E67E22]/5"
-                        : "border-gray-200 hover:border-[#E67E22]/50"
-                    }`}
-                  >
-                    <h3 className="text-[#1A1A1A] mb-2">{barber.name}</h3>
-                    <p className="text-gray-600">{barber.specialty}</p>
-                  </button>
-                ))}
+                {barbers.length === 0 ? (
+                  <p className="text-center text-gray-500">Carregando barbeiros...</p>
+                ) : (
+                  barbers.map((barber) => (
+                    <button
+                      key={barber.id}
+                      onClick={() => handleBarberSelect(barber)}
+                      className={`w-full p-6 rounded-lg border-2 text-left transition-all ${
+                        bookingData.barber?.id === barber.id
+                          ? "border-[#E67E22] bg-[#E67E22]/5"
+                          : "border-gray-200 hover:border-[#E67E22]/50"
+                      }`}
+                    >
+                      <h3 className="text-[#1A1A1A] mb-2">{barber.name}</h3>
+                      <p className="text-gray-600">{barber.specialty || barber.email}</p>
+                    </button>
+                  ))
+                )}
               </div>
 
               <div className="mt-8 flex justify-between">
@@ -351,26 +306,20 @@ export function BookingPage() {
                 <div>
                   <p className="text-[#1A1A1A] mb-4 text-base font-normal">E o horário?</p>
 
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                    {TIME_SLOTS.map((time) => {
-                      const available = isTimeAvailable(
-                        bookingData.date,
-                        time,
-                        bookingData.service,
-                        bookingData.barber
-                      );
-
-                      return (
+                  {loading ? (
+                    <p className="text-center text-gray-500">Carregando horários disponíveis...</p>
+                  ) : availableTimes.length === 0 ? (
+                    <p className="text-center text-gray-500">Nenhum horário disponível para esta data.</p>
+                  ) : (
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                      {availableTimes.map((time) => (
                         <button
                           key={time}
-                          onClick={() => available && handleTimeSelect(time)}
-                          disabled={!available}
+                          onClick={() => handleTimeSelect(time)}
                           className={`
                             p-3 rounded-lg border-2 transition-all
                             ${
-                              !available
-                                ? "border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : bookingData.time === time
+                              bookingData.time === time
                                 ? "border-[#E67E22] bg-[#E67E22] text-white"
                                 : "border-gray-200 hover:border-[#E67E22]/50"
                             }
@@ -378,9 +327,9 @@ export function BookingPage() {
                         >
                           {time}
                         </button>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -494,10 +443,10 @@ export function BookingPage() {
 
                   <Button
                     type="submit"
-                    disabled={!canProceedStep4}
+                    disabled={!canProceedStep4 || loading}
                     className="bg-[#E67E22] hover:bg-[#D35400] text-white disabled:opacity-50"
                   >
-                    Confirmar
+                    {loading ? "Confirmando..." : "Confirmar"}
                   </Button>
                 </div>
               </form>

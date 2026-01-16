@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste da API - Barbershop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            margin-top: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪒 Teste da API - Barbershop</h1>
+        <p>Certifique-se que o backend está rodando em <code>http://localhost:8000</code></p>
+
+        <div class="section">
+            <h2>📋 Listar Dados</h2>
+            <button onclick="listarServicos()">Listar Serviços</button>
+            <button onclick="listarBarbeiros()">Listar Barbeiros</button>
+            <button onclick="listarAgendamentos()">Listar Agendamentos</button>
+        </div>
+
+        <div class="section">
+            <h2>🕒 Horários Disponíveis</h2>
+            <button onclick="verHorariosDisponiveis()">
+                Ver Horários (Barbeiro 1, 31/12/2025, Serviço 1)
+            </button>
+        </div>
+
+        <div class="section">
+            <h2>✅ Criar Agendamento</h2>
+            <button onclick="criarAgendamento()">
+                Criar Agendamento de Exemplo
+            </button>
+        </div>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        function showResult(data, error = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result' + (error ? ' error' : '');
+            resultDiv.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function listarServicos() {
+            try {
+                const response = await fetch(`${API_URL}/services`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function listarBarbeiros() {
+            try {
+                const response = await fetch(`${API_URL}/barbers`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function listarAgendamentos() {
+            try {
+                const response = await fetch(`${API_URL}/bookings`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function verHorariosDisponiveis() {
+            try {
+                const params = new URLSearchParams({
+                    barber_id: '1',
+                    date: '2025-12-31',
+                    service_id: '1'
+                });
+                const response = await fetch(`${API_URL}/bookings/available-times?${params}`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function criarAgendamento() {
+            try {
+                const booking = {
+                    customer_name: "João da Silva",
+                    customer_email: "joao@email.com",
+                    customer_phone: "(11) 98765-4321",
+                    service_id: 1,
+                    barber_id: 1,
+                    booking_date: "2025-12-31",
+                    booking_time: "14:00"
+                };
+
+                const response = await fetch(`${API_URL}/bookings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(booking)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Erro ao criar agendamento');
+                }
+
+                const data = await response.json();
+                showResult({
+                    message: '✅ Agendamento criado com sucesso!',
+                    booking: data
+                });
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        // Testar conexão ao carregar a página
+        window.onload = async () => {
+            try {
+                const response = await fetch(`${API_URL}/services`);
+                if (response.ok) {
+                    showResult({
+                        status: '✅ Backend conectado com sucesso!',
+                        message: 'Clique nos botões acima para testar as funcionalidades'
+                    });
+                }
+            } catch (error) {
+                showResult({
+                    status: '❌ Backend não está respondendo',
+                    message: 'Certifique-se que o backend está rodando em http://localhost:8000',
+                    error: error.message
+                }, true);
+            }
+        };
+    </script>
+</body>
+</html>
