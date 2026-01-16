@@ -1,80 +1,44 @@
-# ✂️ BarberSchedule Lite
+# BarberSchedule Lite
 
-![Status do Projeto](https://img.shields.io/badge/Status-Prototipagem-orange) ![Licença](https://img.shields.io/badge/Licensa-Reservada-red)
+Aplicacao front-end desenvolvida com React e Vite para agendamento de servicos em barbearia.
 
-O **BarberSchedule Lite** é uma aplicação front-end, desenvolvida com **React** e **Vite**, focada em agendamento de serviços para uma barbearia.
+## Funcionalidades
 
-**Funcionalidades Principais:**
+- Landing Page com apresentacao do negocio
+- Sistema de agendamento para clientes
+- Tela de login para profissionais
+- Painel do profissional para visualizacao de agendamentos
 
-- 🏠 **Landing Page:** Apresentação do negócio.
-- 📅 **Sistema de Agendamento:** Fluxo intuitivo para clientes.
-- 🔐 **Autenticação:** Tela de login segura.
-- 📊 **Painel do Profissional:** Visualização de agendamentos.
-- 🎨 **UI Design:** Componentes baseados num layout profissional.
+## Tecnologias
 
-> **Design Original:** [Link do projeto no Figma!](https://www.figma.com/pt-br/comunidade/file/1578834151539150314/barberschedule-lite)
+- React + TypeScript
+- Vite
+- TailwindCSS
+- Shadcn/UI
+- Lucide Icons
 
----
+## Instalacao
 
-## 🚀 Tecnologias Utilizadas
+Requisitos: Node.js instalado.
 
-O projeto foi construído utilizando as melhores práticas do ecossistema React:
-
-- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- [Vite](https://vitejs.dev/)
-- [TailwindCSS](https://tailwindcss.com/)
-- [Shadcn/UI](https://ui.shadcn.com/)
-- [Lucide Icons](https://lucide.dev/)
-
----
-
-## 🔧 Instalação e Execução
-
-Requisitos: Certifique-se de ter o **Node.js** instalado.
-
-### 1. Instale as dependências:
 ```bash
 npm install
+npm run dev
 ```
 
-### 2. Inicie o servidor:
-```bash
-npm install
+Acesse: http://localhost:5173
+
+## Credenciais de Acesso (Demo)
+
+```
+Email: barbeiro1@barbearia.com.br
+Senha: 871374
 ```
 
-### 3. Acesse a aplicação:
+## Estrutura
 
-O projeto estará disponível em: http://localhost:5173/
-
----
-
-## 🔐 Credenciais de Acesso (Demo)
-
-A tela de login é restrita ao modo profissional. Como o projeto não possui back-end persistente, utilize as credenciais hardcoded abaixo:
-
-```bash
-E-mail:	barbeiro1@barbearia.com.br
-Senha:	871374
-```
-
-> ⚠️ **Nota:** Qualquer credencial diferente resultará em falha!
-
----
-
-## 📁 Estrutura do Projeto
-
-Visão geral dos diretórios e responsabilidades:
-
-- **LandingPage** – Página Inicial e apresentação.
-- **BookingPage** – Fluxo completo de agendamento.
-- **LoginPage** – Tela de autenticação.
-- **ProfessionalDashboard** – Painel administrativo.
-- **Components/UI** – Componentes reutilizáveis (botões, inputs, modais).
-
----
-
-## 📌 **Observações Importantes:**
-
-- Todos os agendamentos e sessões de login são simulados via localStorage.
-- Este projeto serve para fins de prototipação e demonstração de habilidades.
-- A reprodução total ou parcial deste código é proibida.
+- LandingPage - Pagina inicial
+- BookingPage - Fluxo de agendamento
+- LoginPage - Autenticacao
+- ProfessionalDashboard - Painel administrativo
+- Components/UI - Componentes reutilizaveis

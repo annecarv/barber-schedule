@@ -25,7 +25,6 @@ export function Header({
 
   return (
     <header className="bg-white border-b border-gray-200">
-      {/* AQUI: altura mínima fixa para evitar o pulo visual */}
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-[72px] flex items-center">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
