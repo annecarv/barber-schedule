@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8001/api';
 
 export interface Service {
   id: number;
@@ -134,4 +134,74 @@ export const cancelBooking = async (id: number): Promise<void> => {
   });
 
   if (!response.ok) throw new Error('Failed to cancel booking');
+};
+
+// Service CRUD
+export interface ServiceCreate {
+  name: string;
+  duration: string;
+  price: string;
+  description?: string;
+}
+
+export const createService = async (service: ServiceCreate): Promise<Service> => {
+  const response = await fetch(`${API_BASE_URL}/services`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(service),
+  });
+  if (!response.ok) throw new Error('Failed to create service');
+  return response.json();
+};
+
+export const updateService = async (id: number, service: ServiceCreate): Promise<Service> => {
+  const response = await fetch(`${API_BASE_URL}/services/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(service),
+  });
+  if (!response.ok) throw new Error('Failed to update service');
+  return response.json();
+};
+
+export const deleteService = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/services/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete service');
+};
+
+// Barber CRUD
+export interface BarberCreate {
+  name: string;
+  email: string;
+  password: string;
+  specialty?: string;
+}
+
+export const createBarber = async (barber: BarberCreate): Promise<Barber> => {
+  const response = await fetch(`${API_BASE_URL}/barbers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(barber),
+  });
+  if (!response.ok) throw new Error('Failed to create barber');
+  return response.json();
+};
+
+export const updateBarber = async (id: number, barber: Partial<BarberCreate>): Promise<Barber> => {
+  const response = await fetch(`${API_BASE_URL}/barbers/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(barber),
+  });
+  if (!response.ok) throw new Error('Failed to update barber');
+  return response.json();
+};
+
+export const deleteBarber = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/barbers/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete barber');
 };

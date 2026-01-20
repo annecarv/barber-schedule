@@ -15,19 +15,23 @@ export function LoginPage() {
 
   const navigate = useNavigate();
 
-  const VALID_EMAIL = "barbeiro1@barbearia.com.br";
-  const VALID_PASSWORD = "871374";
+  const PROFISSIONAL_EMAIL = "barbeiro1@barbearia.com.br";
+  const PROFISSIONAL_PASSWORD = "871374";
+
+  const ADMIN_EMAIL = "admin@barbearia.com.br";
+  const ADMIN_PASSWORD = "admin123";
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const success =
-      userType === "profissional" &&
-      email === VALID_EMAIL &&
-      senha === VALID_PASSWORD;
+    let success = false;
 
-    if (success) {
+    if (userType === "profissional" && email === PROFISSIONAL_EMAIL && senha === PROFISSIONAL_PASSWORD) {
       localStorage.setItem("logged", "profissional");
+      success = true;
+    } else if (userType === "admin" && email === ADMIN_EMAIL && senha === ADMIN_PASSWORD) {
+      localStorage.setItem("logged", "admin");
+      success = true;
     }
 
     setLoginSuccess(success);
@@ -142,7 +146,14 @@ export function LoginPage() {
             <Button
               onClick={() => {
                 setShowModal(false);
-                if (loginSuccess) navigate("/profissional/dashboard");
+                if (loginSuccess) {
+                  const loggedType = localStorage.getItem("logged");
+                  if (loggedType === "admin") {
+                    navigate("/admin/dashboard");
+                  } else {
+                    navigate("/profissional/dashboard");
+                  }
+                }
               }}
               className={`w-full text-white text-lg py-6 rounded-xl ${
                 loginSuccess

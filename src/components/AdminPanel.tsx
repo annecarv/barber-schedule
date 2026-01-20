@@ -24,32 +24,28 @@ import {
   TableRow,
 } from "./ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-
-interface Service {
-  id: string;
-  name: string;
-  duration: "30min" | "1h" | "1h30min";
-  price: string;
-}
-
-interface Barber {
-  id: string;
-  name: string;
-  specialty: string;
-  email: string;
-  password: string;
-}
+import {
+  getServices,
+  getBarbers,
+  createService,
+  updateService,
+  deleteService as apiDeleteService,
+  createBarber,
+  updateBarber,
+  deleteBarber as apiDeleteBarber,
+  Service,
+  Barber,
+} from "../services/api";
 
 export function AdminPanel() {
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [serviceName, setServiceName] = useState("");
-  const [serviceDuration, setServiceDuration] = useState<Service["duration"]>(
-    "30min"
-  );
+  const [serviceDuration, setServiceDuration] = useState("30min");
   const [servicePrice, setServicePrice] = useState("");
 
   const [showBarberModal, setShowBarberModal] = useState(false);
@@ -64,21 +60,25 @@ export function AdminPanel() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const storedServices = localStorage.getItem("services");
-    const storedBarbers = localStorage.getItem("barbers");
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [servicesData, barbersData] = await Promise.all([
+        getServices(),
+        getBarbers(),
+      ]);
+      setServices(servicesData);
+      setBarbers(barbersData);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (storedServices) setServices(JSON.parse(storedServices));
-    if (storedBarbers) setBarbers(JSON.parse(storedBarbers));
+  useEffect(() => {
+    fetchData();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("services", JSON.stringify(services));
-  }, [services]);
-
-  useEffect(() => {
-    localStorage.setItem("barbers", JSON.stringify(barbers));
-  }, [barbers]);
 
   const handleLogout = () => {
     localStorage.removeItem("logged");
@@ -90,7 +90,7 @@ export function AdminPanel() {
       setEditingService(service);
       setServiceName(service.name);
       setServiceDuration(service.duration);
-      setServicePrice(service.price.replace(/\D/g, ""));
+      setServicePrice(service.price.replace(/[^\d]/g, ""));
     } else {
       setEditingService(null);
       setServiceName("");
@@ -100,45 +100,42 @@ export function AdminPanel() {
     setShowServiceModal(true);
   };
 
-  const saveService = () => {
-    if (editingService) {
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === editingService.id
-            ? {
-                ...s,
-                name: serviceName,
-                duration: serviceDuration,
-                price: `R$ ${servicePrice}`,
-              }
-            : s
-        )
-      );
-    } else {
-      setServices((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          name: serviceName,
-          duration: serviceDuration,
-          price: `R$ ${servicePrice}`,
-        },
-      ]);
+  const saveService = async () => {
+    try {
+      const serviceData = {
+        name: serviceName,
+        duration: serviceDuration,
+        price: `R$ ${servicePrice}`,
+      };
+
+      if (editingService) {
+        await updateService(editingService.id, serviceData);
+      } else {
+        await createService(serviceData);
+      }
+      await fetchData();
+      setShowServiceModal(false);
+    } catch (error) {
+      console.error("Erro ao salvar serviço:", error);
     }
-    setShowServiceModal(false);
   };
 
-  const deleteService = (id: string) => {
-    setServices((prev) => prev.filter((s) => s.id !== id));
+  const deleteService = async (id: number) => {
+    try {
+      await apiDeleteService(id);
+      await fetchData();
+    } catch (error) {
+      console.error("Erro ao excluir serviço:", error);
+    }
   };
 
   const openBarberModal = (barber?: Barber) => {
     if (barber) {
       setEditingBarber(barber);
       setBarberName(barber.name);
-      setBarberSpecialty(barber.specialty);
+      setBarberSpecialty(barber.specialty || "");
       setBarberEmail(barber.email);
-      setBarberPassword(barber.password);
+      setBarberPassword("");
     } else {
       setEditingBarber(null);
       setBarberName("");
@@ -149,38 +146,40 @@ export function AdminPanel() {
     setShowBarberModal(true);
   };
 
-  const saveBarber = () => {
-    if (editingBarber) {
-      setBarbers((prev) =>
-        prev.map((b) =>
-          b.id === editingBarber.id
-            ? {
-                ...b,
-                name: barberName,
-                specialty: barberSpecialty,
-                email: barberEmail,
-                password: barberPassword,
-              }
-            : b
-        )
-      );
-    } else {
-      setBarbers((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
+  const saveBarber = async () => {
+    try {
+      if (editingBarber) {
+        const updateData: { name: string; specialty: string; email: string; password?: string } = {
+          name: barberName,
+          specialty: barberSpecialty,
+          email: barberEmail,
+        };
+        if (barberPassword) {
+          updateData.password = barberPassword;
+        }
+        await updateBarber(editingBarber.id, updateData);
+      } else {
+        await createBarber({
           name: barberName,
           specialty: barberSpecialty,
           email: barberEmail,
           password: barberPassword,
-        },
-      ]);
+        });
+      }
+      await fetchData();
+      setShowBarberModal(false);
+    } catch (error) {
+      console.error("Erro ao salvar barbeiro:", error);
     }
-    setShowBarberModal(false);
   };
 
-  const deleteBarber = (id: string) => {
-    setBarbers((prev) => prev.filter((b) => b.id !== id));
+  const deleteBarber = async (id: number) => {
+    try {
+      await apiDeleteBarber(id);
+      await fetchData();
+    } catch (error) {
+      console.error("Erro ao excluir barbeiro:", error);
+    }
   };
 
   const averagePrice =
@@ -188,10 +187,21 @@ export function AdminPanel() {
       ? 0
       : Math.round(
           services.reduce(
-            (sum, s) => sum + Number(s.price.replace(/\D/g, "")),
+            (sum, s) => sum + Number(s.price.replace(/[^\d]/g, "")),
             0
           ) / services.length
         );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50">
+        <Header isDashboardPage={true} onLogout={handleLogout} />
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <p className="text-neutral-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -405,11 +415,7 @@ export function AdminPanel() {
                   <select
                     className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     value={serviceDuration}
-                    onChange={(e) =>
-                      setServiceDuration(
-                        e.target.value as Service["duration"]
-                      )
-                    }
+                    onChange={(e) => setServiceDuration(e.target.value)}
                   >
                     <option value="30min">30min</option>
                     <option value="1h">1h</option>
@@ -477,7 +483,9 @@ export function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <Label className="mb-1 block">Senha</Label>
+                  <Label className="mb-1 block">
+                    {editingBarber ? "Nova Senha (deixe vazio para manter)" : "Senha"}
+                  </Label>
                   <Input
                     type="password"
                     value={barberPassword}
@@ -499,7 +507,7 @@ export function AdminPanel() {
                     !barberName ||
                     !barberSpecialty ||
                     !barberEmail ||
-                    !barberPassword
+                    (!editingBarber && !barberPassword)
                   }
                 >
                   Salvar
