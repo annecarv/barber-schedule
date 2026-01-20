@@ -25,8 +25,9 @@ Sistema completo de agendamento para barbearia com frontend React e backend Fast
 ### Telas Implementadas
 - Landing Page - apresentacao do negocio
 - Pagina de Agendamento - fluxo completo com selecao de servico, barbeiro, data e horario
-- Tela de Login - autenticacao de profissionais
+- Tela de Login - autenticacao de profissionais e administradores
 - Dashboard Profissional - visualizacao de agendamentos do dia e futuros
+- Painel Admin - gerenciamento de servicos, barbeiros e agenda geral
 
 ### Recursos
 - Layout responsivo
@@ -45,7 +46,9 @@ Sistema completo de agendamento para barbearia com frontend React e backend Fast
 │   │   ├── LandingPage.tsx
 │   │   ├── BookingPage.tsx
 │   │   ├── LoginPage.tsx
-│   │   └── ProfessionalDashboard.tsx
+│   │   ├── ProfessionalDashboard.tsx
+│   │   ├── AdminPanel.tsx
+│   │   └── AdminAgenda.tsx
 │   ├── services/
 │   │   └── api.ts           # Servicos de API
 │   └── utils/
@@ -89,10 +92,19 @@ Documentacao da API: http://localhost:8000/docs
 
 ## Credenciais de Acesso
 
+### Profissional
 ```
 Email: barbeiro1@barbearia.com.br
 Senha: 871374
 ```
+Acesso: `/profissional/dashboard`
+
+### Administrador
+```
+Email: admin@barbearia.com.br
+Senha: admin123
+```
+Acesso: `/admin/dashboard`
 
 ## API Endpoints
 
