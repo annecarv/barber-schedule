@@ -23,6 +23,8 @@ export function BookingPage() {
   const [showModal, setShowModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
@@ -42,6 +44,8 @@ export function BookingPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoadingInitial(true);
+        setLoadError(null);
         const [servicesData, barbersData] = await Promise.all([
           getServices(),
           getBarbers()
@@ -50,6 +54,9 @@ export function BookingPage() {
         setBarbers(barbersData);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
+        setLoadError("Erro ao carregar dados. Verifique se o servidor está rodando.");
+      } finally {
+        setLoadingInitial(false);
       }
     };
 
@@ -198,8 +205,21 @@ export function BookingPage() {
               <p className="text-[#1A1A1A] mb-4 text-lg font-normal">E aí, o que vai ser?</p>
 
               <div className="space-y-4">
-                {services.length === 0 ? (
+                {loadError ? (
+                  <div className="text-center">
+                    <p className="text-red-500 mb-4">{loadError}</p>
+                    <Button
+                      onClick={() => window.location.reload()}
+                      variant="outline"
+                      className="border-[#E67E22] text-[#E67E22]"
+                    >
+                      Tentar novamente
+                    </Button>
+                  </div>
+                ) : loadingInitial ? (
                   <p className="text-center text-gray-500">Carregando serviços...</p>
+                ) : services.length === 0 ? (
+                  <p className="text-center text-gray-500">Nenhum serviço disponível no momento.</p>
                 ) : (
                   services.map((service) => (
                     <button
